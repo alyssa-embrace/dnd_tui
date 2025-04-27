@@ -1,20 +1,37 @@
 mod app;
 mod views;
 
-use std::io;
+use std::{io, sync::mpsc};
 
+// This function should be used to compose all of the various services.
 fn main() -> io::Result<()>{
-    // This function should be used to compose all of the various services.
     let mut terminal = ratatui::init();
 
     let mut app = app::App {
         exit: false,
-        view: app::View::MainMenu, // This should be a widget that is a menu or something similar
+        view: app::View::MainMenu,
     };
 
-    let app_result = app.run(&mut terminal);
+    let (event_tx, event_rx) = mpsc::channel::<app::Event>();
+
+    setup_input_thread(event_tx.clone());
+
+    let app_result = app.run(&mut terminal, event_rx);
 
     ratatui::restore();
 
     app_result
+}
+
+fn setup_input_thread(tx: mpsc::Sender<app::Event>) {
+    std::thread::spawn(move || {
+        loop {
+            match crossterm::event::read().unwrap() {
+                crossterm::event::Event::Key(key_event) => {
+                    tx.send(app::Event::Input(key_event)).unwrap();
+                }
+                _ => {}
+            }
+        }
+    });
 }

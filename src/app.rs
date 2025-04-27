@@ -6,7 +6,7 @@ use crate::views::{
 
 use crossterm::event::KeyCode;
 use ratatui::DefaultTerminal;
-use std::io;
+use std::{io, sync::mpsc::Receiver};
 
 /*
     The app will have multiple main widgets.
@@ -20,6 +20,10 @@ pub struct App {
     pub view: View, // This also allows us to differentiate for the input handling
 }
 
+pub enum Event {
+    Input(crossterm::event::KeyEvent)
+}
+
 pub enum View {
     MainMenu,
     CharacterEditor,
@@ -27,21 +31,12 @@ pub enum View {
 }
 
 impl App {
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal, rx: Receiver<Event>) -> io::Result<()> {
         while !self.exit {
             // We should block on receiving update events here before rerendering
             terminal.draw(|frame| self.draw(frame))?;
-            match crossterm::event::read().unwrap() { // This is a placeholder for the actual event handling
-                crossterm::event::Event::Key(key_event) => {
-                    match key_event.code {
-                        KeyCode::Esc => self.exit = true,
-                        KeyCode::Char('1') => self.view = View::MainMenu,
-                        KeyCode::Char('2') => self.view = View::CharacterEditor,
-                        KeyCode::Char('3') => self.view = View::CombatTracker,
-                        _ => {}
-                    }
-                },
-                _ => {}
+            match rx.recv().unwrap() {
+                Event::Input(key_event) => self.handle_key_event(key_event)?,
             }
         }
         Ok(())
@@ -73,4 +68,19 @@ impl App {
             }
         }
     }
+
+    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
+        if key_event.kind == crossterm::event::KeyEventKind::Press {
+            match key_event.code { // This is a placeholder for the actual key event handling
+                // We should differentiate between the various views here and handle the input accordingly.
+                KeyCode::Esc => self.exit = true,
+                KeyCode::Char('1') => self.view = View::MainMenu,
+                KeyCode::Char('2') => self.view = View::CharacterEditor,
+                KeyCode::Char('3') => self.view = View::CombatTracker,
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
 }
