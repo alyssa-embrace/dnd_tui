@@ -19,7 +19,6 @@ fn main() -> io::Result<()>{
         exit: false,
         view: app::View::MainMenu,
         view_map: view_map,
-        command_tx: command_tx.clone(),
         command_rx: command_rx,
     };
 

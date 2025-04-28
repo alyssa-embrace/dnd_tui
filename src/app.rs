@@ -9,7 +9,6 @@ pub struct App {
     pub exit: bool,
     pub view: View, // This also allows us to differentiate for the input handling
     pub view_map: HashMap<View, Box<dyn AppView>>,
-    pub command_tx: Sender<Command>,
     pub command_rx: Receiver<Command>,
 }
 
