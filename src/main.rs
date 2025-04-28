@@ -1,15 +1,26 @@
 mod app;
 mod views;
 
-use std::{io, sync::mpsc};
+use std::{collections::HashMap, io, sync::mpsc};
 
+use views::AppView;
 // This function should be used to compose all of the various services.
 fn main() -> io::Result<()>{
     let mut terminal = ratatui::init();
 
+    let (command_tx, command_rx) = mpsc::channel::<app::Command>();
+
+    let mut view_map: HashMap<app::View, Box<dyn AppView>> = HashMap::new();
+    view_map.insert(app::View::MainMenu, Box::new(views::MainMenu::new(command_tx.clone())));
+    view_map.insert(app::View::CharacterEditor, Box::new(views::CharacterEditor::new(command_tx.clone())));
+    view_map.insert(app::View::CombatTracker, Box::new(views::CombatTracker::new(command_tx.clone())));
+
     let mut app = app::App {
         exit: false,
         view: app::View::MainMenu,
+        view_map: view_map,
+        command_tx: command_tx.clone(),
+        command_rx: command_rx,
     };
 
     let (event_tx, event_rx) = mpsc::channel::<app::Event>();
