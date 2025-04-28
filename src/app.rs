@@ -2,6 +2,7 @@ use crate::views::AppView;
 
 use crossterm::event::KeyCode;
 use ratatui::DefaultTerminal;
+
 use std::{collections::HashMap, io, sync::mpsc::{Receiver, Sender}};
 
 pub struct App {
@@ -87,5 +88,4 @@ impl App {
             }
         }
     }
-
 }

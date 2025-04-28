@@ -4,7 +4,6 @@ mod views;
 use std::{collections::HashMap, io, sync::mpsc};
 
 use views::AppView;
-
 // This function should be used to compose all of the various services.
 fn main() -> io::Result<()>{
     let mut terminal = ratatui::init();
