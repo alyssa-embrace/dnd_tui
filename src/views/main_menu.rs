@@ -1,6 +1,6 @@
 use std::sync::mpsc::Sender;
 
-use ratatui::{style::{Color, Style, Stylize}, text::Line, widgets::{Block, List, ListState}, Frame};
+use ratatui::{layout::{Constraint, Layout}, style::{Color, Style, Stylize}, text::Line, widgets::{Block, List, ListState}, Frame};
 use crate::{app::Command, views::app_view::AppView};
 
 pub struct MainMenu {
@@ -54,7 +54,8 @@ impl MainMenu {
 
 impl AppView for MainMenu {
     fn draw(&mut self, frame: &mut Frame) {
-        let area = frame.area();
+        let [_, menu_area, _] = Layout::vertical([Constraint::Percentage(40), Constraint::Percentage(20), Constraint::Percentage(40)]).areas(frame.area());
+        let [_, centered_menu_area, _] = Layout::horizontal([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)]).areas(menu_area);
         let block = Block::bordered()
             .title(Line::from("Main Menu").bold().centered())
             .border_style(Style::default().fg(Color::White))
@@ -67,12 +68,13 @@ impl AppView for MainMenu {
             .collect::<Vec<_>>();
         let list = List::new(list_items).highlight_symbol(">").block(block);
 
-        frame.render_stateful_widget(list, area, &mut self.main_menu_state);
+        frame.render_stateful_widget(list, centered_menu_area, &mut self.main_menu_state);
     }
 
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) {
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code {
+                crossterm::event::KeyCode::Esc => self.command_tx.send(Command::Exit).unwrap(),
                 crossterm::event::KeyCode::Up => self.command_tx.send(Command::Previous).unwrap(),
                 crossterm::event::KeyCode::Down => self.command_tx.send(Command::Next).unwrap(),
                 crossterm::event::KeyCode::Enter => self.command_tx.send(Command::Submit).unwrap(),

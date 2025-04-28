@@ -61,7 +61,6 @@ impl App {
         if key_event.kind == crossterm::event::KeyEventKind::Press {
             match key_event.code { // This is a placeholder for the actual key event handling
                 // We should differentiate between the various views here and handle the input accordingly.
-                KeyCode::Esc => self.command_tx.send(Command::Exit).unwrap(),
                 KeyCode::Char('1') => self.view = View::MainMenu,
                 KeyCode::Char('2') => self.view = View::CharacterEditor,
                 KeyCode::Char('3') => self.view = View::CombatTracker,
