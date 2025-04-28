@@ -42,17 +42,20 @@ impl AppView for CharacterEditor {
                     self.command_tx.send(Command::Exit).unwrap();
                 }
                 KeyCode::Char(c) => {
-                    if key_event.modifiers == crossterm::event::KeyModifiers::CONTROL {
+                    if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
                         match c {
                             'z' => {
                                 self.command_tx.send(Command::Undo).unwrap();
                             }
                             _ => {}
                         }
-                    } else if key_event.modifiers == crossterm::event::KeyModifiers::NONE {
-                        if c.is_alphanumeric() || c == ' ' {
-                            
-                            self.command_input.push(c);
+                    } else {
+                        if c.is_alphanumeric() || c == ' ' || c.is_ascii_punctuation(){
+                            self.command_input.push(if key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
+                                c.to_ascii_uppercase()
+                            } else {
+                                c
+                            });
                         }
                     }
                 }
