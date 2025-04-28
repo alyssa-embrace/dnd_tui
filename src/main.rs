@@ -7,9 +7,12 @@ use std::{io, sync::mpsc};
 fn main() -> io::Result<()>{
     let mut terminal = ratatui::init();
 
+    let mut main_menu = views::MainMenu::default();
+
     let mut app = app::App {
         exit: false,
         view: app::View::MainMenu,
+        main_menu: &mut main_menu,
     };
 
     let (event_tx, event_rx) = mpsc::channel::<app::Event>();
