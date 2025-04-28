@@ -29,6 +29,7 @@ pub enum Command {
     Submit,
     Next,
     Previous,
+    Undo
 }
 
 impl App {
@@ -76,7 +77,12 @@ impl App {
 
     fn handle_command(&mut self, command: Command) {
         match command {
-            Command::Exit => self.exit = true,
+            Command::Exit => {
+                match self.view {
+                    View::MainMenu => self.exit = true,
+                    _ => self.view = View::MainMenu,
+                }
+            },
             Command::View(view) => self.view = view,
             _ => {
                 self.view_map
