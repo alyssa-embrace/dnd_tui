@@ -8,15 +8,15 @@ use crate::app::Event;
 use super::AppView;
 
 pub struct CharacterEditor {
-    command_tx: Sender<Event>,
-    command_input: String,
+    tx: Sender<Event>,
+    input: String,
 }
 
 impl CharacterEditor {
     pub fn new(tx: Sender<Event>) -> Self {
         CharacterEditor {
-            command_tx: tx,
-            command_input: String::new(),
+            tx,
+            input: String::new(),
         }
     }
 
@@ -24,19 +24,19 @@ impl CharacterEditor {
         if key_event.kind == KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => {
-                    self.command_tx.send(Event::Exit).unwrap();
+                    self.tx.send(Event::Exit).unwrap();
                 }
                 KeyCode::Char(c) => {
                     if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
                         match c {
                             'z' => {
-                                self.command_tx.send(Event::Undo).unwrap();
+                                self.tx.send(Event::Undo).unwrap();
                             }
                             _ => {}
                         }
                     } else {
                         if c.is_alphanumeric() || c == ' ' || c.is_ascii_punctuation(){
-                            self.command_input.push(if key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
+                            self.input.push(if key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
                                 c.to_ascii_uppercase()
                             } else {
                                 c
@@ -45,12 +45,10 @@ impl CharacterEditor {
                     }
                 }
                 KeyCode::Backspace => {
-                    // We should convert this to a command and send it to the command channel
-                    self.command_input.pop();
+                    self.input.pop();
                 }
                 KeyCode::Enter => {
-                    // Handle command submission
-                    self.command_input.clear(); // Clear input after submission
+                    self.input.clear(); // Clear input after submission
                 }
                 _ => {                    
                 }
@@ -61,7 +59,7 @@ impl CharacterEditor {
 
 impl AppView for CharacterEditor {
     fn draw(&mut self, frame: &mut ratatui::Frame) {
-        let [data_area, command_input_area] = Layout::vertical([Constraint::Percentage(95), Constraint::Percentage(5)]).areas(frame.area());
+        let [data_area, command_input_area] = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(frame.area());
 
         let block = ratatui::widgets::Block::bordered()
             .title(Line::from("Character Editor").bold().centered())
@@ -69,7 +67,7 @@ impl AppView for CharacterEditor {
             .style(ratatui::style::Style::default().bg(ratatui::style::Color::Black));
         block.render(data_area, frame.buffer_mut());
 
-        Line::from(self.command_input.clone()).bold().render(command_input_area, frame.buffer_mut());
+        Line::from(self.input.clone()).bold().render(command_input_area, frame.buffer_mut());
     }
 
     fn handle_event(&mut self, event: crate::app::Event) {

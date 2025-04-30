@@ -1,6 +1,6 @@
 use crate::views::AppView;
 
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::KeyEvent;
 use ratatui::DefaultTerminal;
 
 use std::{collections::HashMap, io, sync::mpsc::{Receiver, Sender}};
