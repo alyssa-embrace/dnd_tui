@@ -3,49 +3,34 @@ use std::sync::mpsc::Sender;
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{layout::{Constraint, Layout}, style::Stylize, text::Line, widgets::Widget};
 
-use crate::app::Command;
+use crate::app::Event;
 
 use super::AppView;
 
 pub struct CharacterEditor {
-    command_tx: Sender<Command>,
+    command_tx: Sender<Event>,
     command_input: String,
 }
 
 impl CharacterEditor {
-    pub fn new(tx: Sender<Command>) -> Self {
+    pub fn new(tx: Sender<Event>) -> Self {
         CharacterEditor {
             command_tx: tx,
             command_input: String::new(),
         }
     }
-}
-
-impl AppView for CharacterEditor {
-    fn draw(&mut self, frame: &mut ratatui::Frame) {
-        let [data_area, command_input_area] = Layout::vertical([Constraint::Percentage(95), Constraint::Percentage(5)]).areas(frame.area());
-
-        let block = ratatui::widgets::Block::bordered()
-            .title(Line::from("Character Editor").bold().centered())
-            .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::White))
-            .style(ratatui::style::Style::default().bg(ratatui::style::Color::Black));
-        block.render(data_area, frame.buffer_mut());
-
-        Line::from(self.command_input.clone()).bold().render(command_input_area, frame.buffer_mut());
-    }
 
     fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) {
-        // Handle key events here
         if key_event.kind == KeyEventKind::Press {
             match key_event.code {
                 KeyCode::Esc => {
-                    self.command_tx.send(Command::Exit).unwrap();
+                    self.command_tx.send(Event::Exit).unwrap();
                 }
                 KeyCode::Char(c) => {
                     if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
                         match c {
                             'z' => {
-                                self.command_tx.send(Command::Undo).unwrap();
+                                self.command_tx.send(Event::Undo).unwrap();
                             }
                             _ => {}
                         }
@@ -72,8 +57,25 @@ impl AppView for CharacterEditor {
             }
         }
     }
+}
 
-    fn handle_command(&mut self, _command: crate::app::Command) {
-        // Handle commands here
+impl AppView for CharacterEditor {
+    fn draw(&mut self, frame: &mut ratatui::Frame) {
+        let [data_area, command_input_area] = Layout::vertical([Constraint::Percentage(95), Constraint::Percentage(5)]).areas(frame.area());
+
+        let block = ratatui::widgets::Block::bordered()
+            .title(Line::from("Character Editor").bold().centered())
+            .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::White))
+            .style(ratatui::style::Style::default().bg(ratatui::style::Color::Black));
+        block.render(data_area, frame.buffer_mut());
+
+        Line::from(self.command_input.clone()).bold().render(command_input_area, frame.buffer_mut());
+    }
+
+    fn handle_event(&mut self, event: crate::app::Event) {
+        match event {
+            Event::Input(key_event) => self.handle_key_event(key_event),
+            _ => {}
+        }
     }
 }

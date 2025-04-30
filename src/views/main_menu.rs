@@ -1,16 +1,16 @@
 use std::sync::mpsc::Sender;
 
 use ratatui::{layout::{Constraint, Layout}, style::{Color, Style, Stylize}, text::Line, widgets::{Block, List, ListState}, Frame};
-use crate::{app::Command, views::app_view::AppView};
+use crate::{app::Event, views::app_view::AppView};
 
 pub struct MainMenu {
     pub main_menu_state: ListState,
     items: Vec<String>,
-    command_tx: Sender<Command>,
+    command_tx: Sender<Event>,
 }
 
 impl MainMenu {
-    pub fn new(tx: Sender<Command>) -> Self {
+    pub fn new(tx: Sender<Event>) -> Self {
         let mut main_menu_state = ListState::default();
         main_menu_state.select(Some(0));
         MainMenu {
@@ -50,6 +50,18 @@ impl MainMenu {
         };
         self.main_menu_state.select(Some(i));
     }
+
+    fn handle_key_event(&self, key_event: crossterm::event::KeyEvent) {
+        if key_event.kind == crossterm::event::KeyEventKind::Press {
+            match key_event.code {
+                crossterm::event::KeyCode::Esc => self.command_tx.send(Event::Exit).unwrap(),
+                crossterm::event::KeyCode::Up => self.command_tx.send(Event::Previous).unwrap(),
+                crossterm::event::KeyCode::Down => self.command_tx.send(Event::Next).unwrap(),
+                crossterm::event::KeyCode::Enter => self.command_tx.send(Event::Submit).unwrap(),
+                _ => {}
+            }
+        }
+    }
 }
 
 impl AppView for MainMenu {
@@ -71,33 +83,22 @@ impl AppView for MainMenu {
         frame.render_stateful_widget(list, centered_menu_area, &mut self.main_menu_state);
     }
 
-    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) {
-        if key_event.kind == crossterm::event::KeyEventKind::Press {
-            match key_event.code {
-                crossterm::event::KeyCode::Esc => self.command_tx.send(Command::Exit).unwrap(),
-                crossterm::event::KeyCode::Up => self.command_tx.send(Command::Previous).unwrap(),
-                crossterm::event::KeyCode::Down => self.command_tx.send(Command::Next).unwrap(),
-                crossterm::event::KeyCode::Enter => self.command_tx.send(Command::Submit).unwrap(),
-                _ => {}
-            }
-        }
-    }
-    
-    fn handle_command(&mut self, command: Command) {
+    fn handle_event(&mut self, command: Event) {
         match command {
-            Command::Next => self.next(),
-            Command::Previous => self.previous(),
-            Command::Submit => {
+            Event::Next => self.next(),
+            Event::Previous => self.previous(),
+            Event::Submit => {
                 match self.main_menu_state.selected() {
                     Some(0) => {
-                        self.command_tx.send(Command::View(crate::app::View::CharacterEditor)).unwrap();
+                        self.command_tx.send(Event::ChangeView(crate::app::View::CharacterEditor)).unwrap();
                     }
                     Some(1) => {
-                        self.command_tx.send(Command::View(crate::app::View::CombatTracker)).unwrap();
+                        self.command_tx.send(Event::ChangeView(crate::app::View::CombatTracker)).unwrap();
                     }
                     _ => {}
                 }
-            }
+            },
+            Event::Input(key_event) => self.handle_key_event(key_event),
             _ => {}
         }
     }

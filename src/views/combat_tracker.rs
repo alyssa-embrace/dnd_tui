@@ -2,18 +2,29 @@ use std::sync::mpsc::Sender;
 
 use ratatui::{style::Stylize, text::Line, widgets::Widget};
 
-use crate::app::Command;
+use crate::app::Event;
 
 use super::AppView;
 
 pub struct CombatTracker {
-    command_tx: Sender<Command>,
+    tx: Sender<Event>,
 }
 
 impl CombatTracker {
-    pub fn new(tx: Sender<Command>) -> Self {
-        CombatTracker {
-            command_tx: tx,
+    pub fn new(tx: Sender<Event>) -> Self {
+        CombatTracker { 
+            tx 
+        }
+    }
+
+    fn handle_key_event(&self, key_event: crossterm::event::KeyEvent) {
+        if key_event.kind == crossterm::event::KeyEventKind::Press {
+            match key_event.code {
+                crossterm::event::KeyCode::Esc => {
+                    self.tx.send(Event::Exit).unwrap();
+                }
+                _ => {}
+            }
         }
     }
 }
@@ -28,11 +39,10 @@ impl AppView for CombatTracker {
         block.render(area, frame.buffer_mut());
     }
 
-    fn handle_key_event(&mut self, _key_event: crossterm::event::KeyEvent) {
-        // Handle key events here
-    }
-
-    fn handle_command(&mut self, _command: crate::app::Command) {
-        // Handle commands here
+    fn handle_event(&mut self, event: crate::app::Event) {
+        match event {
+            Event::Input(key_event) => self.handle_key_event(key_event),
+            _ => {}
+        }
     }
 }
