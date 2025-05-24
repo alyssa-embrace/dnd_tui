@@ -73,11 +73,18 @@ impl App {
     fn setup_input_thread(tx: Sender<Event>) {
         std::thread::spawn(move || {
             loop {
-                match crossterm::event::read().unwrap() {
-                    crossterm::event::Event::Key(key_event) => {
-                        tx.send(Event::Input(key_event)).unwrap();
+                match crossterm::event::read() {
+                    Ok(crossterm::event::Event::Key(key_event)) => {
+                        if let Err(e) = tx.send(Event::Input(key_event)) {
+                            eprintln!("Failed to send input event: {}", e);
+                            break; // Exit the loop if the receiver has disconnected
+                        }
                     }
-                    _ => {}
+                    Ok(_) => {} // Ignore other event types
+                    Err(e) => {
+                        eprintln!("Error reading input event: {}", e);
+                        // Continue and try to read the next event
+                    }
                 }
             }
         });
