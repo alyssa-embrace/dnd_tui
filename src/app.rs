@@ -3,7 +3,11 @@ use crate::views::AppView;
 use crossterm::event::KeyEvent;
 use ratatui::DefaultTerminal;
 
-use std::{collections::HashMap, io, sync::mpsc::{Receiver, Sender}};
+use std::{
+    collections::HashMap,
+    io,
+    sync::mpsc::{Receiver, Sender},
+};
 
 pub struct App {
     pub exit: bool,
@@ -36,9 +40,8 @@ impl App {
         while !self.exit {
             // We should block on receiving update events here before rerendering
             terminal.draw(|frame| self.draw(frame))?;
-            match self.rx.recv() {
-                Ok(command) => self.handle_event(command),
-                Err(_) => {}
+            if let Ok(command) = self.rx.recv() {
+                self.handle_event(command);
             }
         }
         Ok(())
@@ -46,19 +49,14 @@ impl App {
 
     fn draw(&mut self, frame: &mut ratatui::Frame) {
         // We should differentiate between the various views here and draw them accordingly.
-        self.view_map
-            .get_mut(&self.view)
-            .unwrap()
-            .draw(frame);
+        self.view_map.get_mut(&self.view).unwrap().draw(frame);
     }
 
     fn handle_event(&mut self, command: Event) {
         match command {
-            Event::Exit => {
-                match self.view {
-                    View::MainMenu => self.exit = true,
-                    _ => self.view = View::MainMenu,
-                }
+            Event::Exit => match self.view {
+                View::MainMenu => self.exit = true,
+                _ => self.view = View::MainMenu,
             },
             Event::ChangeView(view) => self.view = view,
             _ => {
@@ -76,6 +74,8 @@ impl App {
                 match crossterm::event::read() {
                     Ok(crossterm::event::Event::Key(key_event)) => {
                         if let Err(e) = tx.send(Event::Input(key_event)) {
+                            // We should probably include a logger here because we can't assume
+                            // that the console is a safe place to print event failures explicitly BECAUSE we're a TUI
                             eprintln!("Failed to send input event: {}", e);
                             break; // Exit the loop if the receiver has disconnected
                         }
