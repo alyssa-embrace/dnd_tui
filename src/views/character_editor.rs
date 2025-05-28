@@ -66,20 +66,21 @@ impl CharacterEditor {
                     self.input.pop();
                 }
                 KeyCode::Enter => {
-                    let tokens = self.lexer.lex(self.input.clone());
-                    for token in tokens.iter() {
-                        match token {
-                            crate::parser::character_editor_lexer::CharacterEditorToken::Word(
-                                word,
-                            ) => {
-                                println!("{word}");
-                            }
-                            crate::parser::character_editor_lexer::CharacterEditorToken::Number(
-                                num,
-                            ) => {
-                                println!("{num}");
+                    match self.lexer.lex(self.input.clone()) {
+                        Ok(tokens) => {
+                            // We should process the tokens from the lexer for the command abstract syntax tree
+                            for token in tokens.iter() {
+                                match token {
+                                    crate::parser::character_editor_lexer::CharacterEditorToken::Word(word) => {
+                                        println!("{word}");
+                                    }
+                                    crate::parser::character_editor_lexer::CharacterEditorToken::Number(num) => {
+                                        println!("{num}");
+                                    }
+                                }
                             }
                         }
+                        Err(err) => {} // We should log the error somehow for user consumption
                     }
                     self.input.clear(); // Clear input after submission
                 }

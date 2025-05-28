@@ -4,6 +4,11 @@ use crate::parser::Lexer;
 
 pub struct CharacterEditorLexer {}
 
+#[derive(Debug)]
+pub enum CharacterEditorLexerError {
+    UnexpectedCharacter(char),
+}
+
 pub enum CharacterEditorToken {
     Word(String),
     Number(i8),
@@ -34,8 +39,8 @@ impl CharacterEditorLexer {
     }
 }
 
-impl Lexer<CharacterEditorToken> for CharacterEditorLexer {
-    fn lex(&self, input: String) -> Vec<CharacterEditorToken> {
+impl Lexer<CharacterEditorToken, CharacterEditorLexerError> for CharacterEditorLexer {
+    fn lex(&self, input: String) -> Result<Vec<CharacterEditorToken>, CharacterEditorLexerError> {
         let mut tokens: Vec<CharacterEditorToken> = Vec::new();
         let mut iter = input.chars().peekable();
 
@@ -68,10 +73,14 @@ impl Lexer<CharacterEditorToken> for CharacterEditorLexer {
                     chars.push_str(&rest);
                     tokens.push(CharacterEditorToken::Word(chars));
                 }
-                _ => {}
+                _ => {
+                    if let Some(c) = iter.next() {
+                        return Err(CharacterEditorLexerError::UnexpectedCharacter(c));
+                    }
+                }
             }
         }
 
-        tokens
+        Ok(tokens)
     }
 }
