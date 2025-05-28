@@ -1,15 +1,24 @@
 use std::sync::mpsc::Sender;
 
 use crossterm::event::{KeyCode, KeyEventKind};
-use ratatui::{layout::{Constraint, Layout}, style::Stylize, text::Line, widgets::Widget};
+use ratatui::{
+    layout::{Constraint, Layout},
+    style::Stylize,
+    text::Line,
+    widgets::Widget,
+};
 
-use crate::app::Event;
+use crate::{
+    app::Event,
+    parser::{CharacterEditorLexer, Lexer},
+};
 
 use super::AppView;
 
 pub struct CharacterEditor {
     tx: Sender<Event>,
     input: String,
+    lexer: CharacterEditorLexer,
 }
 
 impl CharacterEditor {
@@ -17,6 +26,7 @@ impl CharacterEditor {
         CharacterEditor {
             tx,
             input: String::new(),
+            lexer: CharacterEditorLexer {},
         }
     }
 
@@ -27,7 +37,10 @@ impl CharacterEditor {
                     self.tx.send(Event::Exit).unwrap();
                 }
                 KeyCode::Char(c) => {
-                    if key_event.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) {
+                    if key_event
+                        .modifiers
+                        .contains(crossterm::event::KeyModifiers::CONTROL)
+                    {
                         match c {
                             'z' => {
                                 self.tx.send(Event::Undo).unwrap();
@@ -35,12 +48,17 @@ impl CharacterEditor {
                             _ => {}
                         }
                     } else {
-                        if c.is_alphanumeric() || c == ' ' || c.is_ascii_punctuation(){
-                            self.input.push(if key_event.modifiers.contains(crossterm::event::KeyModifiers::SHIFT) {
-                                c.to_ascii_uppercase()
-                            } else {
-                                c
-                            });
+                        if c.is_alphanumeric() || c == ' ' || c.is_ascii_punctuation() {
+                            self.input.push(
+                                if key_event
+                                    .modifiers
+                                    .contains(crossterm::event::KeyModifiers::SHIFT)
+                                {
+                                    c.to_ascii_uppercase()
+                                } else {
+                                    c
+                                },
+                            );
                         }
                     }
                 }
@@ -48,10 +66,24 @@ impl CharacterEditor {
                     self.input.pop();
                 }
                 KeyCode::Enter => {
+                    let tokens = self.lexer.lex(self.input.clone());
+                    for token in tokens.iter() {
+                        match token {
+                            crate::parser::character_editor_lexer::CharacterEditorToken::Word(
+                                word,
+                            ) => {
+                                println!("{word}");
+                            }
+                            crate::parser::character_editor_lexer::CharacterEditorToken::Number(
+                                num,
+                            ) => {
+                                println!("{num}");
+                            }
+                        }
+                    }
                     self.input.clear(); // Clear input after submission
                 }
-                _ => {                    
-                }
+                _ => {}
             }
         }
     }
@@ -59,7 +91,8 @@ impl CharacterEditor {
 
 impl AppView for CharacterEditor {
     fn draw(&mut self, frame: &mut ratatui::Frame) {
-        let [data_area, command_input_area] = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(frame.area());
+        let [data_area, command_input_area] =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(frame.area());
 
         let block = ratatui::widgets::Block::bordered()
             .title(Line::from("Character Editor").bold().centered())
@@ -67,13 +100,14 @@ impl AppView for CharacterEditor {
             .style(ratatui::style::Style::default().bg(ratatui::style::Color::Black));
         block.render(data_area, frame.buffer_mut());
 
-        Line::from(self.input.clone()).bold().render(command_input_area, frame.buffer_mut());
+        Line::from(self.input.clone())
+            .bold()
+            .render(command_input_area, frame.buffer_mut());
     }
 
     fn handle_event(&mut self, event: crate::app::Event) {
-        match event {
-            Event::Input(key_event) => self.handle_key_event(key_event),
-            _ => {}
+        if let Event::Input(key_event) = event {
+            self.handle_key_event(key_event);
         }
     }
 }
