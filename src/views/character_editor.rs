@@ -8,6 +8,8 @@ use ratatui::{
     widgets::Widget,
 };
 
+use log::error;
+
 use crate::{
     app::Event,
     parser::{CharacterEditorLexer, Lexer},
@@ -80,7 +82,9 @@ impl CharacterEditor {
                                 }
                             }
                         }
-                        Err(err) => {} // We should log the error somehow for user consumption
+                        Err(err) => {
+                            error!("{:?}", err)
+                        } // We should log the error somehow for user consumption
                     }
                     self.input.clear(); // Clear input after submission
                 }

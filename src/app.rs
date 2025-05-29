@@ -9,6 +9,8 @@ use std::{
     sync::mpsc::{Receiver, Sender},
 };
 
+use log::info;
+
 pub struct App {
     pub exit: bool,
     pub view: View, // This also allows us to differentiate for the input handling
@@ -36,6 +38,7 @@ pub enum Event {
 
 impl App {
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        info!("Initializing app::dnd_tui");
         Self::setup_input_thread(self.tx.clone());
         while !self.exit {
             // We should block on receiving update events here before rerendering
@@ -44,6 +47,7 @@ impl App {
                 self.handle_event(command);
             }
         }
+        info!("Shutting down app::dnd_tui");
         Ok(())
     }
 
