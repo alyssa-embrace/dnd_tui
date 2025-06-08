@@ -1,4 +1,4 @@
-use std::sync::mpsc::Sender;
+use std::{str::FromStr, sync::mpsc::Sender};
 
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
@@ -12,7 +12,7 @@ use log::error;
 
 use crate::{
     app::Event,
-    parser::{CharacterEditorLexer, Lexer},
+    parser::{character_editor_lexer::CharacterEditorLexerError, CharacterEditorLexer, Lexer},
 };
 
 use super::AppView;
@@ -20,6 +20,7 @@ use super::AppView;
 pub struct CharacterEditor {
     tx: Sender<Event>,
     input: String,
+    feedback: String,
     lexer: CharacterEditorLexer,
 }
 
@@ -28,7 +29,27 @@ impl CharacterEditor {
         CharacterEditor {
             tx,
             input: String::new(),
+            feedback: String::new(),
             lexer: CharacterEditorLexer {},
+        }
+    }
+
+    fn handle_lexer_error(&mut self, error: CharacterEditorLexerError) {
+        match error {
+            CharacterEditorLexerError::UnexpectedCharacter {
+                input,
+                unexpected_char,
+            } => {
+                self.feedback = format!(
+                    "Unexpected character '{}' in input \"{:?}\"",
+                    unexpected_char, input
+                );
+
+                error!(
+                    "Unexpected character '{}' in input \"{:?}\"",
+                    unexpected_char, input
+                );
+            }
         }
     }
 
@@ -74,16 +95,16 @@ impl CharacterEditor {
                             for token in tokens.iter() {
                                 match token {
                                     crate::parser::character_editor_lexer::CharacterEditorToken::Word(word) => {
-                                        println!("{word}");
+                                        println!("word: {word}");
                                     }
                                     crate::parser::character_editor_lexer::CharacterEditorToken::Number(num) => {
-                                        println!("{num}");
+                                        println!("num: {num}");
                                     }
                                 }
                             }
                         }
                         Err(err) => {
-                            error!("{:?}", err)
+                            self.handle_lexer_error(err);
                         } // We should log the error somehow for user consumption
                     }
                     self.input.clear(); // Clear input after submission
@@ -99,12 +120,27 @@ impl AppView for CharacterEditor {
         let [data_area, command_input_area] =
             Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(frame.area());
 
+        let [_, feedback_area, _] = Layout::vertical([
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(frame.area());
+
         let block = ratatui::widgets::Block::bordered()
             .title(Line::from("Character Editor").bold().centered())
             .border_style(ratatui::style::Style::default().fg(ratatui::style::Color::White))
             .style(ratatui::style::Style::default().bg(ratatui::style::Color::Black));
         block.render(data_area, frame.buffer_mut());
 
+        if !self.feedback.is_empty() {
+            Line::from(self.feedback.clone())
+                .bold()
+                .bg(ratatui::style::Color::Rgb(128, 0, 255))
+                .render(feedback_area, frame.buffer_mut());
+        }
+
+        // This is the input line. We need to treat this area as sacrosanct.
         Line::from(self.input.clone())
             .bold()
             .render(command_input_area, frame.buffer_mut());

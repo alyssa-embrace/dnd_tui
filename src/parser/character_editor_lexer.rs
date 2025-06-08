@@ -6,7 +6,10 @@ pub struct CharacterEditorLexer {}
 
 #[derive(Debug)]
 pub enum CharacterEditorLexerError {
-    UnexpectedCharacter(char),
+    UnexpectedCharacter {
+        input: Option<String>,
+        unexpected_char: char,
+    },
 }
 
 pub enum CharacterEditorToken {
@@ -17,6 +20,7 @@ pub enum CharacterEditorToken {
 impl CharacterEditorLexer {
     // Helper method to parse digits and add a number token
     fn parse_number<I>(
+        input: &str,
         iter: &mut std::iter::Peekable<I>,
         tokens: &mut Vec<CharacterEditorToken>,
         is_negative: bool,
@@ -38,7 +42,17 @@ impl CharacterEditorLexer {
             }
         } else if !digits.is_empty() {
             if let Some(&c) = iter.peek() {
-                return Err(CharacterEditorLexerError::UnexpectedCharacter(c));
+                if is_negative {
+                    return Err(CharacterEditorLexerError::UnexpectedCharacter {
+                        input: Some(input.to_string()),
+                        unexpected_char: c,
+                    });
+                } else {
+                    return Err(CharacterEditorLexerError::UnexpectedCharacter {
+                        input: Some(input.to_string()),
+                        unexpected_char: c,
+                    });
+                }
             }
         }
 
@@ -71,11 +85,11 @@ impl Lexer<CharacterEditorToken, CharacterEditorLexerError> for CharacterEditorL
                 }
                 '-' => {
                     iter.next(); // Consume the '-'
-                    Self::parse_number(&mut iter, &mut tokens, true)?
+                    Self::parse_number(&input, &mut iter, &mut tokens, true)?
                 }
                 '0'..='9' => {
                     // We've seen a digit, but haven't consumed it yet
-                    Self::parse_number(&mut iter, &mut tokens, false)?;
+                    Self::parse_number(&input, &mut iter, &mut tokens, false)?;
                 }
                 ch if ch.is_alphabetic() => {
                     // First, consume the alphabetic character we just peeked at
@@ -87,16 +101,22 @@ impl Lexer<CharacterEditorToken, CharacterEditorLexerError> for CharacterEditorL
                         .by_ref()
                         .peeking_take_while(|&c| c.is_alphanumeric() || c == '_')
                         .collect();
+                    chars.push_str(&rest);
 
-                    if Self::check_next(&mut iter, |c| c.is_alphanumeric()) {
-                        chars.push_str(&rest);
+                    if Self::check_next(&mut iter, |c| c.is_whitespace()) {
                         tokens.push(CharacterEditorToken::Word(chars));
                     } else if let Some(&c) = iter.peek() {
-                        return Err(CharacterEditorLexerError::UnexpectedCharacter(c));
+                        return Err(CharacterEditorLexerError::UnexpectedCharacter {
+                            input: Some(input),
+                            unexpected_char: c,
+                        });
                     }
                 }
                 _ => {
-                    return Err(CharacterEditorLexerError::UnexpectedCharacter(ch));
+                    return Err(CharacterEditorLexerError::UnexpectedCharacter {
+                        input: Some(input),
+                        unexpected_char: ch,
+                    })
                 }
             }
         }
