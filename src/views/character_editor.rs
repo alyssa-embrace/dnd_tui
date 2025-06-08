@@ -12,7 +12,10 @@ use log::error;
 
 use crate::{
     app::Event,
-    parser::{character_editor_lexer::CharacterEditorLexerError, CharacterEditorLexer, Lexer},
+    parser::{
+        character_editor_lexer::CharacterEditorLexerError, CharacterEditorLexer,
+        CharacterEditorParser, Lexer, Parser,
+    },
 };
 
 use super::AppView;
@@ -22,6 +25,7 @@ pub struct CharacterEditor {
     input: String,
     feedback: String,
     lexer: CharacterEditorLexer,
+    parser: CharacterEditorParser,
 }
 
 impl CharacterEditor {
@@ -31,6 +35,7 @@ impl CharacterEditor {
             input: String::new(),
             feedback: String::new(),
             lexer: CharacterEditorLexer {},
+            parser: CharacterEditorParser {},
         }
     }
 
@@ -91,16 +96,12 @@ impl CharacterEditor {
                 KeyCode::Enter => {
                     match self.lexer.lex(self.input.clone()) {
                         Ok(tokens) => {
-                            // We should process the tokens from the lexer for the command abstract syntax tree
-                            for token in tokens.iter() {
-                                match token {
-                                    crate::parser::character_editor_lexer::CharacterEditorToken::Word(word) => {
-                                        println!("word: {word}");
-                                    }
-                                    crate::parser::character_editor_lexer::CharacterEditorToken::Number(num) => {
-                                        println!("num: {num}");
-                                    }
+                            // We need to handle parse success and error failure
+                            match self.parser.parse(tokens) {
+                                Ok(event) => {
+                                    self.tx.send(event).unwrap();
                                 }
+                                Err(err) => error!("A parsing error has occurred"),
                             }
                         }
                         Err(err) => {
